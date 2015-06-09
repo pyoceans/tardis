@@ -52,11 +52,6 @@ with open('requirements.txt') as f:
 install_requires = [t.strip() for t in tests_require]
 
 
-with open('requirements-dev.txt') as f:
-    tests_require = f.readlines()
-tests_require = [t.strip() for t in tests_require]
-
-
 config = dict(name='tardis',
               version=extract_version(),
               packages=['tardis'],

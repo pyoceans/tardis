@@ -1,9 +1,7 @@
 from __future__ import division, absolute_import
 
-# Standard library.
 from datetime import datetime
 
-# Scientific.
 import numpy as np
 import numpy.ma as ma
 from scipy.spatial import cKDTree as KDTree
@@ -140,7 +138,7 @@ def z_coord(cube):
     ...     warnings.simplefilter("ignore")
     ...     cube = iris.load_cube(url, 'sea_water_potential_temperature')
     >>> z_coord(cube).name()
-    u'S-coordinate at RHO-points'
+    u'ocean_s_coordinate_g1'
 
     """
     water_level = ['sea_surface_height',
@@ -564,7 +562,7 @@ def remove_ssh(cube):
     ...     cube = iris.load_cube(url, 'sea_water_potential_temperature')
     >>> cube = get_surface(cube)
     >>> len(cube.coords())
-    9
+    10
     >>> cube = remove_ssh(cube)
     >>> len(cube.coords())
     8

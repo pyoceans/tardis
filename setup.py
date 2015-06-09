@@ -82,7 +82,7 @@ config = dict(name='tardis',
               platforms='any',
               keywords=['oceanography', 'data analysis', 'space-time travel'],
               install_requires=install_requires,
-              tests_require=tests_require,
+              tests_require='pytest',
               zip_safe=False)
 
 setup(**config)

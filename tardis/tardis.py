@@ -463,8 +463,9 @@ def proc_cube(cube, bbox=None, time=None, constraint=None, units=None):
     >>> import iris
     >>> import warnings
     >>> from datetime import datetime, timedelta
-    >>> url = ("http://tds.marine.rutgers.edu/thredds/dodsC/roms/espresso/"
-    ...        "2013_da/his_Best/ESPRESSO_Real-Time_v2_History_Best_Available_best.ncd")
+    >>> url = ("http://tds.marine.rutgers.edu/thredds/"
+    ...        "dodsC/roms/espresso/2013_da/his_Best/"
+    ...        "ESPRESSO_Real-Time_v2_History_Best_Available_best.ncd")
     >>> stop = datetime(2014, 7, 7, 12)
     >>> start = stop - timedelta(days=7)
     >>> stop = stop.replace(tzinfo=pytz.utc)

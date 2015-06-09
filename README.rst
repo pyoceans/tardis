@@ -1,9 +1,6 @@
 tardis
 ======
 
-.. image:: https://zenodo.org/badge/doi/10.5281/zenodo.17496.svg
-   :target: http://dx.doi.org/10.5281/zenodo.17496
-   :alt: doi
 .. image:: http://img.shields.io/travis/pyoceans/tardis/master.svg?style=flat
    :target: https://travis-ci.org/pyoceans/tardis
    :alt: build status

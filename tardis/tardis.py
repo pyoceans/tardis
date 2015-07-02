@@ -34,6 +34,8 @@ __all__ = ['is_model',
            'remove_ssh',
            'save_timeseries',
            'make_tree',
+           'is_water',
+           'get_nearest_series',
            'get_nearest_water']
 
 
@@ -51,16 +53,18 @@ def _source_of_data(cube, coverage_content_type='modelResult'):
     >>> import iris
     >>> import warnings
     >>> iris.FUTURE.netcdf_promote = True
-    >>> url = ("http://testbedapps-dev.sura.org/thredds/dodsC/"
-    ...        "in/vims/selfe/ike/ultralite/vardrag/nowave/2d")
+    >>> url = ("http://comt.sura.org/thredds/dodsC/data/comt_1_archive/"
+    ...        "inundation_tropical/VIMS_SELFE/"
+    ...        "Hurricane_Ike_2D_final_run_without_waves")
     >>> with warnings.catch_warnings():
     ...     warnings.simplefilter("ignore")
     ...     cubes = iris.load_raw(url, 'sea_surface_height_above_geoid')
     >>> [_source_of_data(cube) for cube in cubes]
-    [True, True]
+    [False, True]
     """
 
-    cube_coverage_content_type = cube.attributes['coverage_content_type']
+    attributes = cube.attributes
+    cube_coverage_content_type = attributes.get('coverage_content_type', None)
     if cube_coverage_content_type == coverage_content_type:
         return True
     else:
@@ -652,7 +656,21 @@ def make_tree(cube):
     return tree, lon, lat
 
 
-def get_nearest_water(cube, tree, xi, yi, k=10, max_dist=0.04, min_var=0.01):
+def is_water(cube, min_var=0.01):
+    """
+    Use only data where the standard deviation of the time cube exceeds
+    0.01 m (1 cm) this eliminates flat line model time cube that come from
+    land points that should have had missing values.
+    (Accounts for wet-and-dry models.)
+
+    """
+    arr = ma.masked_invalid(cube.data).filled(fill_value=0)
+    if arr.std() <= min_var:
+        return False
+    return True
+
+
+def get_nearest_series(cube, tree, xi, yi, k=10, max_dist=0.04):
     """
     Find `k` nearest model data points from an iris `cube` at station
     lon: `xi`, lat: `yi` up to `max_dist` in degrees.  Must provide a Scipy's
@@ -670,17 +688,20 @@ def get_nearest_water(cube, tree, xi, yi, k=10, max_dist=0.04, min_var=0.01):
     ...     cube = iris.load_cube(url, 'sea_water_potential_temperature')
     >>> cube = get_surface(cube)
     >>> tree, lon, lat = make_tree(cube)
-    >>> series, dist, idx = get_nearest_water(cube, tree,
-    ...                                       lon[0, 10], lat[0, 10],
-    ...                                        k=10, max_dist=0.04,
-    ...                                        min_var=0.01)
+    >>> series, dist, idx = get_nearest_series(cube, tree,
+    ...                                        lon[0, 10], lat[0, 10],
+    ...                                        k=10, max_dist=0.04)
     >>> idx == (0, 10)
+    True
+    >>> is_water(series, min_var=0.01)
+    False
+    >>> series, dist, idx = get_nearest_series(cube, tree,
+    ...                                        -75.7135500943, 36.1640944084,
+    ...                                        k=10, max_dist=0.04)
+    >>> is_water(series, min_var=0.01)
     True
 
     """
-    # TODO: Use rtree instead of KDTree.
-    # NOTE: Based on the iris `_nearest_neighbour_indices_ndcoords`.
-
     distances, indices = tree.query(np.array([xi, yi]).T, k=k)
     if indices.size == 0:
         raise ValueError("No data found.")
@@ -703,9 +724,6 @@ def get_nearest_water(cube, tree, xi, yi, k=10, max_dist=0.04, min_var=0.01):
             shape = (cube.coord(axis='Y').shape[0],
                      cube.coord(axis='X').shape[0])
             i, j = np.unravel_index(indices, shape)
-    # Use only data where the standard deviation of the time series exceeds
-    # 0.01 m (1 cm) this eliminates flat line model time series that come from
-    # land points that should have had missing values.
     series, dist, idx = None, None, None
     IJs = list(zip(i, j))
     for dist, idx in zip(distances, IJs):
@@ -714,12 +732,19 @@ def get_nearest_water(cube, tree, xi, yi, k=10, max_dist=0.04, min_var=0.01):
             idx = (idx[0],)
         # This weird syntax allow for idx to be len 1 or 2.
         series = cube[(slice(None),)+idx]
-        # Accounting for wet-and-dry models.
-        arr = ma.masked_invalid(series.data).filled(fill_value=0)
-        if arr.std() <= min_var:
-            series = None
-            break
     return series, dist, idx
+
+
+def get_nearest_water(cube, tree, xi, yi, k=10, max_dist=0.04, min_var=0.01):
+    """
+    Legacy function.  Use `get_nearest_series`+`is_water` instead!
+
+    """
+    series, dist, idx = get_nearest_series(cube, tree, xi, yi,
+                                           k=k, max_dist=max_dist)
+    if is_water(series, min_var=min_var):
+        return series, dist, idx
+    return None, dist, idx
 
 
 if __name__ == '__main__':

@@ -183,11 +183,17 @@ def get_surface(cube):
     """
     z = z_coord(cube)
     if z:
+        if np.argmin(z.shape) == 0 and z.ndim == 2:
+            points = z[:, 0].points
+        elif np.argmin(z.shape) == 1 and z.ndim == 2:
+            points = z[0, :].points
+        else:
+            points = z.points
         positive = z.attributes.get('positive', None)
         if positive == 'up':
-            idx = np.unique(z.points.argmax(axis=0))[0]
+            idx = np.unique(points.argmax(axis=0))[0]
         else:
-            idx = np.unique(z.points.argmin(axis=0))[0]
+            idx = np.unique(points.argmin(axis=0))[0]
         return cube[:, int(idx), ...]
     else:
         return cube

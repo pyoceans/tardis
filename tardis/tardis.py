@@ -740,11 +740,41 @@ def get_nearest_water(cube, tree, xi, yi, k=10, max_dist=0.04, min_var=0.01):
     Legacy function.  Use `get_nearest_series`+`is_water` instead!
 
     """
-    series, dist, idx = get_nearest_series(cube, tree, xi, yi,
-                                           k=k, max_dist=max_dist)
-    if is_water(series, min_var=min_var):
-        return series, dist, idx
-    return None, dist, idx
+    distances, indices = tree.query(np.array([xi, yi]).T, k=k)
+    if indices.size == 0:
+        raise ValueError("No data found.")
+    # Get data up to specified distance.
+    mask = distances <= max_dist
+    distances, indices = distances[mask], indices[mask]
+    if distances.size == 0:
+        msg = "No data near ({}, {}) max_dist={}.".format
+        raise ValueError(msg(xi, yi, max_dist))
+    # Unstructured model.
+    if (cube.coord(axis='X').ndim == 1) and (cube.ndim == 2):
+        i = j = indices
+        unstructured = True
+    # Structured model.
+    else:
+        unstructured = False
+        if cube.coord(axis='X').ndim == 2:  # CoordinateMultiDim
+            i, j = np.unravel_index(indices, cube.coord(axis='X').shape)
+        else:
+            shape = (cube.coord(axis='Y').shape[0],
+                     cube.coord(axis='X').shape[0])
+            i, j = np.unravel_index(indices, shape)
+    IJs = list(zip(i, j))
+    for dist, idx in zip(distances, IJs):
+        idx = tuple([int(kk) for kk in idx])
+        if unstructured:  # NOTE: This would be so elegant in py3k!
+            idx = (idx[0],)
+        # This weird syntax allow for idx to be len 1 or 2.
+        series = cube[(slice(None),)+idx]
+        if is_water(series, min_var=0.01):
+            break
+        else:
+            series = None
+            continue
+    return series, dist, idx
 
 
 if __name__ == '__main__':

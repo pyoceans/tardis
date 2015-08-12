@@ -1,6 +1,14 @@
 Changelog
 ---------
 
+Version 0.1.0
+
+* Fixed `get_surface()` that demand all the z points.
+* Fixed `get_nearest_water()` to loop over all the points until actually finds
+  water.
+* Added `get_nearest_series()` when finding wanter is not an issue (much faster
+  than `get_nearest_water()`.
+
 Version 0.0.1
 
 * First release (Factored out from utilities)

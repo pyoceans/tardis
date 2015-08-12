@@ -593,31 +593,33 @@ def save_timeseries(df, outfile, standard_name, **kw):
     /cf-conventions.html#idp5577536"""
     cube = as_cube(df, calendars={1: iris.unit.CALENDAR_GREGORIAN})
     cube.coord("index").rename("time")
+
+    # Cast all station names to strings and renamed it.
+    columns = cube.coord('columns').points.astype(str).tolist()
+    cube.coord('columns').points = columns
     cube.coord("columns").rename("station name")
     cube.rename(standard_name)
+    cube.coord("station name").var_name = 'station'
 
     longitude = kw.get("longitude")
     latitude = kw.get("latitude")
     if longitude is not None:
-        longitude = iris.coords.AuxCoord(longitude,
+        longitude = iris.coords.AuxCoord(float(longitude),
                                          var_name="lon",
                                          standard_name="longitude",
                                          long_name="station longitude",
                                          units=iris.unit.Unit("degrees"))
-    cube.add_aux_coord(longitude, data_dims=1)
+        cube.add_aux_coord(longitude, data_dims=1)
 
     if latitude is not None:
-        latitude = iris.coords.AuxCoord(latitude,
+        latitude = iris.coords.AuxCoord(float(latitude),
                                         var_name="lat",
                                         standard_name="latitude",
                                         long_name="station latitude",
                                         units=iris.unit.Unit("degrees"))
         cube.add_aux_coord(latitude, data_dims=1)
 
-    # Work around iris to get String instead of np.array object.
-    string_list = cube.coord("station name").points.tolist()
-    cube.coord("station name").points = string_list
-    cube.coord("station name").var_name = 'station'
+    cube.units = kw.get('units')
 
     station_attr = kw.get("station_attr")
     if station_attr is not None:

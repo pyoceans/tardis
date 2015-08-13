@@ -604,7 +604,7 @@ def save_timeseries(df, outfile, standard_name, **kw):
     longitude = kw.get("longitude")
     latitude = kw.get("latitude")
     if longitude is not None:
-        longitude = iris.coords.AuxCoord(float(longitude),
+        longitude = iris.coords.AuxCoord(np.float_(longitude),
                                          var_name="lon",
                                          standard_name="longitude",
                                          long_name="station longitude",
@@ -612,7 +612,7 @@ def save_timeseries(df, outfile, standard_name, **kw):
         cube.add_aux_coord(longitude, data_dims=1)
 
     if latitude is not None:
-        latitude = iris.coords.AuxCoord(float(latitude),
+        latitude = iris.coords.AuxCoord(np.float_(latitude),
                                         var_name="lat",
                                         standard_name="latitude",
                                         long_name="station latitude",

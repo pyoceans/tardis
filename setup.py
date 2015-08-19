@@ -45,8 +45,8 @@ long_description = '{}\n{}'.format(read('README.rst'), read('CHANGES.txt'))
 
 
 with open('requirements.txt') as f:
-    tests_require = f.readlines()
-install_requires = [t.strip() for t in tests_require]
+    install_requires = f.readlines()
+install_requires = [t.strip() for t in install_requires]
 
 
 setup(name='tardis',
@@ -69,7 +69,7 @@ setup(name='tardis',
                    'Programming Language :: Python :: 3.4',
                    'Topic :: Education',
                    'Topic :: Scientific/Engineering'],
-      description='TARDIS: Collection of functions for Scitools Iris',
+      description='TARDIS: Collection of functions for SciTools Iris',
       author=authors,
       author_email=email,
       maintainer='Filipe Fernandes',

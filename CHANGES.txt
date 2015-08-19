@@ -1,6 +1,11 @@
 Changelog
 ---------
 
+Version 0.2.0
+
+* First first with the new API.
+* Added an Ocean Model Enhanced Cube Class `ecube`.
+
 Version 0.1.1
 
 * Fixed a bug in `save_timeseries ` to cast all netCDF4 variables in the

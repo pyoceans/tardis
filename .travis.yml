@@ -2,7 +2,6 @@ language: python
 
 env:
     - CONDA="python=2.7"
-    #- CONDA="python=3.4"
 
 before_install:
     - wget http://bit.ly/miniconda -O miniconda.sh
@@ -15,8 +14,8 @@ before_install:
     - travis_retry conda install --yes pytest
     - conda info -a
     # GUI
-    - "export DISPLAY=:99.0"
-    - "sh -e /etc/init.d/xvfb start"
+    #- "export DISPLAY=:99.0"
+    #- "sh -e /etc/init.d/xvfb start"
 
 script:
-    - python setup.py test
+    - py.test --verbose --doctest-modules --ignore setup.py

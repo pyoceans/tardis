@@ -51,14 +51,11 @@ def _source_of_data(cube, coverage_content_type='modelResult'):
     Examples
     --------
     >>> import iris
-    >>> import warnings
     >>> iris.FUTURE.netcdf_promote = True
     >>> url = ("http://comt.sura.org/thredds/dodsC/data/comt_1_archive/"
     ...        "inundation_tropical/VIMS_SELFE/"
     ...        "Hurricane_Ike_2D_final_run_without_waves")
-    >>> with warnings.catch_warnings():
-    ...     warnings.simplefilter("ignore")
-    ...     cubes = iris.load_raw(url, 'sea_surface_height_above_geoid')
+    >>> cubes = iris.load_raw(url, 'sea_surface_height_above_geoid')
     >>> [_source_of_data(cube) for cube in cubes]
     [False, True]
     """
@@ -80,20 +77,15 @@ def is_model(cube):
     Examples
     --------
     >>> import iris
-    >>> import warnings
     >>> iris.FUTURE.netcdf_promote = True
     >>> url = ("http://crow.marine.usf.edu:8080/thredds/dodsC/"
     ...        "FVCOM-Nowcast-Agg.nc")
-    >>> with warnings.catch_warnings():
-    ...     warnings.simplefilter("ignore")
-    ...     cubes = iris.load_raw(url, 'sea_surface_height_above_geoid')
+    >>> cubes = iris.load_raw(url, 'sea_surface_height_above_geoid')
     >>> [is_model(cube) for cube in cubes]
     [True]
     >>> url = ("http://thredds.cdip.ucsd.edu/thredds/dodsC/cdip/archive/"
     ...        "043p1/043p1_d17.nc")
-    >>> with warnings.catch_warnings():
-    ...     warnings.simplefilter("ignore")
-    ...     cubes = iris.load_raw(url, 'sea_surface_temperature')
+    >>> cubes = iris.load_raw(url, 'sea_surface_temperature')
     >>> [is_model(cube) for cube in cubes]
     [False]
 
@@ -130,59 +122,55 @@ def is_model(cube):
 
 def z_coord(cube):
     """
-    Heuristic way to return **one** the vertical coordinate.
+    Return the canonical vertical coordinate.
 
     Examples
     --------
     >>> import iris
-    >>> import warnings
     >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/sabgom/"
     ...        "SABGOM_Forecast_Model_Run_Collection_best.ncd")
-    >>> with warnings.catch_warnings():
-    ...     warnings.simplefilter("ignore")
-    ...     cube = iris.load_cube(url, 'sea_water_potential_temperature')
+    >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
     >>> z_coord(cube).name()
     u'ocean_s_coordinate_g1'
 
     """
-    water_level = ['sea_surface_height',
-                   'sea_surface_elevation',
-                   'sea_surface_height_above_geoid',
-                   'sea_surface_height_above_sea_level',
-                   'water_surface_height_above_reference_datum',
-                   'sea_surface_height_above_reference_ellipsoid']
+    non_dimensional = ['atmosphere_hybrid_height_coordinate',
+                       'atmosphere_hybrid_sigma_pressure_coordinate',
+                       'atmosphere_sigma_coordinate',
+                       'atmosphere_sleve_coordinate',
+                       'ocean_s_coordinate',
+                       'ocean_s_coordinate_g1',
+                       'ocean_s_coordinate_g2',
+                       'ocean_sigma_coordinate',
+                       'ocean_sigma_z_coordinate']
+    z = None
+    # If only one exists get that.
     try:
         z = cube.coord(axis='Z')
     except CoordinateNotFoundError:
-        z = None
-        for coord in cube.coords(axis='Z'):
-            if coord.name() not in water_level:
-                z = coord
+        # If a named `z_coord` exist.
+        try:
+            z = cube.coord(axis='altitude')
+        except CoordinateNotFoundError:
+            # OK, let's use the non-dimensional names.
+            for coord in cube.coords(axis='Z'):
+                if coord.name() in non_dimensional:
+                    z = coord
+                    break
     return z
 
 
-def get_surface(cube):
+def _get_surface_idx(cube):
     """
-    Work around `iris.cube.Cube.slices` error:
-    The requested coordinates are not orthogonal.
-
-    Examples
-    --------
-    >>> import iris
-    >>> import warnings
-    >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/sabgom/"
-    ...        "SABGOM_Forecast_Model_Run_Collection_best.ncd")
-    >>> with warnings.catch_warnings():
-    ...     warnings.simplefilter("ignore")
-    ...     cube = iris.load_cube(url, 'sea_water_potential_temperature')
-    >>> cube.ndim == 4
-    True
-    >>> get_surface(cube).ndim == 3
-    True
+    Return the `cube` index for the surface layer of for any model grid
+    (rgrid, ugrid, sgrid), and any non-dimensional coordinate.
 
     """
     z = z_coord(cube)
-    if z:
+    if not z:
+        msg = "Cannot find the surface for cube {!r}".format
+        raise ValueError(msg(cube))
+    else:
         if np.argmin(z.shape) == 0 and z.ndim == 2:
             points = z[:, 0].points
         elif np.argmin(z.shape) == 1 and z.ndim == 2:
@@ -194,9 +182,34 @@ def get_surface(cube):
             idx = np.unique(points.argmax(axis=0))[0]
         else:
             idx = np.unique(points.argmin(axis=0))[0]
+        return idx
+
+
+def get_surface(cube):
+    """
+    Work around `iris.cube.Cube.slices` error:
+    The requested coordinates are not orthogonal.
+
+    Examples
+    --------
+    >>> import iris
+    >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/sabgom/"
+    ...        "SABGOM_Forecast_Model_Run_Collection_best.ncd")
+    >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
+    >>> cube.ndim == 4
+    True
+    >>> get_surface(cube).ndim == 3
+    True
+
+    """
+    idx = _get_surface_idx(cube)
+    if cube.ndim == 4:
         return cube[:, int(idx), ...]
+    elif cube.ndim == 3:
+        return cube[int(idx), ...]
     else:
-        return cube
+        msg = "Cannot find the surface for cube {!r}".format
+        raise ValueError(msg(cube))
 
 
 def time_coord(cube):
@@ -206,12 +219,9 @@ def time_coord(cube):
     Examples
     --------
     >>> import iris
-    >>> import warnings
     >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/sabgom/"
     ...        "SABGOM_Forecast_Model_Run_Collection_best.ncd")
-    >>> with warnings.catch_warnings():
-    ...     warnings.simplefilter("ignore")
-    ...     cube = iris.load_cube(url, 'sea_water_potential_temperature')
+    >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
     >>> time_coord(cube).name()
     u'time'
 
@@ -231,13 +241,10 @@ def time_near(cube, datetime):
     Examples
     --------
     >>> import iris
-    >>> import warnings
     >>> from datetime import datetime
     >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/sabgom/"
     ...        "SABGOM_Forecast_Model_Run_Collection_best.ncd")
-    >>> with warnings.catch_warnings():
-    ...     warnings.simplefilter("ignore")
-    ...     cube = iris.load_cube(url, 'sea_water_potential_temperature')
+    >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
     >>> isinstance(time_near(cube, datetime.utcnow()), int)
     True
 
@@ -259,13 +266,10 @@ def time_slice(cube, start, stop=None):
     Examples
     --------
     >>> import iris
-    >>> import warnings
     >>> from datetime import datetime, timedelta
     >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/sabgom/"
     ...        "SABGOM_Forecast_Model_Run_Collection_best.ncd")
-    >>> with warnings.catch_warnings():
-    ...     warnings.simplefilter("ignore")
-    ...     cube = iris.load_cube(url, 'sea_water_potential_temperature')
+    >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
     >>> stop = datetime.utcnow()
     >>> start = stop - timedelta(days=7)
     >>> time_slice(cube, start, stop).shape[0] < cube.shape[0]
@@ -295,12 +299,9 @@ def _get_indices(cube, bbox):
     Examples
     --------
     >>> import iris
-    >>> import warnings
     >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/sabgom/"
     ...        "SABGOM_Forecast_Model_Run_Collection_best.ncd")
-    >>> with warnings.catch_warnings():
-    ...     warnings.simplefilter("ignore")
-    ...     cube = iris.load_cube(url, 'sea_water_potential_temperature')
+    >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
     >>> bbox = [-87.40, 24.25, -74.70, 36.70]
     >>> idxs = _get_indices(cube, bbox)
     >>> [isinstance(idx, int) for idx in idxs]
@@ -332,12 +333,9 @@ def bbox_extract_2Dcoords(cube, bbox):
     Examples
     --------
     >>> import iris
-    >>> import warnings
     >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/sabgom/"
     ...        "SABGOM_Forecast_Model_Run_Collection_best.ncd")
-    >>> with warnings.catch_warnings():
-    ...     warnings.simplefilter("ignore")
-    ...     cube = iris.load_cube(url, 'sea_water_potential_temperature')
+    >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
     >>> bbox = [-87.40, 24.25, -74.70, 36.70]
     >>> new_cube = bbox_extract_2Dcoords(cube, bbox)
     >>> cube.shape != new_cube.shape
@@ -355,11 +353,8 @@ def bbox_extract_1Dcoords(cube, bbox):
     Examples
     --------
     >>> import iris
-    >>> import warnings
     >>> url = "http://oos.soest.hawaii.edu/thredds/dodsC/pacioos/hycom/global"
-    >>> with warnings.catch_warnings():
-    ...     warnings.simplefilter("ignore")
-    ...     cube = iris.load_cube(url, 'sea_water_potential_temperature')
+    >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
     >>> bbox = [272.6, 24.25, 285.3, 36.70]
     >>> new_cube = bbox_extract_1Dcoords(cube, bbox)
     >>> cube.shape != new_cube.shape
@@ -381,11 +376,8 @@ def subset(cube, bbox):
     Examples
     --------
     >>> import iris
-    >>> import warnings
     >>> url = "http://oos.soest.hawaii.edu/thredds/dodsC/pacioos/hycom/global"
-    >>> with warnings.catch_warnings():
-    ...     warnings.simplefilter("ignore")
-    ...     cube = iris.load_cube(url, 'sea_water_potential_temperature')
+    >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
     >>> bbox = [272.6, 24.25, 285.3, 36.70]
     >>> new_cube = subset(cube, bbox)
     >>> cube.shape != new_cube.shape
@@ -434,14 +426,11 @@ def quick_load_cubes(url, name_list, callback=None, strict=False):
     Examples
     --------
     >>> import iris
-    >>> import warnings
     >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/sabgom/"
     ...        "SABGOM_Forecast_Model_Run_Collection_best.ncd")
     >>> name_list = ['sea_water_potential_temperature']
-    >>> with warnings.catch_warnings():
-    ...     warnings.simplefilter("ignore")
-    ...     cubes = quick_load_cubes(url, name_list)
-    ...     cube = quick_load_cubes(url, name_list, strict=True)
+    >>> cubes = quick_load_cubes(url, name_list)
+    >>> cube = quick_load_cubes(url, name_list, strict=True)
     >>> isinstance(cubes, list)
     True
     >>> isinstance(cube, iris.cube.Cube)
@@ -471,7 +460,6 @@ def proc_cube(cube, bbox=None, time=None, constraint=None, units=None):
     --------
     >>> import pytz
     >>> import iris
-    >>> import warnings
     >>> from datetime import datetime, timedelta
     >>> url = ("http://tds.marine.rutgers.edu/thredds/"
     ...        "dodsC/roms/espresso/2013_da/his_Best/"
@@ -481,9 +469,7 @@ def proc_cube(cube, bbox=None, time=None, constraint=None, units=None):
     >>> stop = stop.replace(tzinfo=pytz.utc)
     >>> bbox = [-87.40, 24.25, -74.70, 36.70]
     >>> name_list = ['sea_water_potential_temperature']
-    >>> with warnings.catch_warnings():
-    ...     warnings.simplefilter("ignore")
-    ...     cube = quick_load_cubes(url, name_list, strict=True)
+    >>> cube = quick_load_cubes(url, name_list, strict=True)
     >>> new_cube = proc_cube(cube, bbox=bbox, time=(start, stop))
     >>> cube.shape != new_cube.shape
     True
@@ -565,12 +551,9 @@ def remove_ssh(cube):
     Examples
     --------
     >>> import iris
-    >>> import warnings
     >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/sabgom/"
     ...        "SABGOM_Forecast_Model_Run_Collection_best.ncd")
-    >>> with warnings.catch_warnings():
-    ...     warnings.simplefilter("ignore")
-    ...     cube = iris.load_cube(url, 'sea_water_potential_temperature')
+    >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
     >>> cube = get_surface(cube)
     >>> len(cube.coords())
     10
@@ -641,13 +624,10 @@ def make_tree(cube):
     Examples
     --------
     >>> import iris
-    >>> import warnings
     >>> from scipy.spatial import cKDTree as KDTree
     >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/sabgom/"
     ...        "SABGOM_Forecast_Model_Run_Collection_best.ncd")
-    >>> with warnings.catch_warnings():
-    ...     warnings.simplefilter("ignore")
-    ...     cube = iris.load_cube(url, 'sea_water_potential_temperature')
+    >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
     >>> cube = get_surface(cube)
     >>> tree, lon, lat = make_tree(cube)
     >>> isinstance(tree, KDTree)
@@ -687,13 +667,11 @@ def get_nearest_series(cube, tree, xi, yi, k=10, max_dist=0.04):
     Examples
     --------
     >>> import iris
-    >>> import warnings
     >>> from scipy.spatial import cKDTree as KDTree
     >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/sabgom/"
     ...        "SABGOM_Forecast_Model_Run_Collection_best.ncd")
-    >>> with warnings.catch_warnings():
-    ...     warnings.simplefilter("ignore")
-    ...     cube = iris.load_cube(url, 'sea_water_potential_temperature')
+
+    >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
     >>> cube = get_surface(cube)
     >>> tree, lon, lat = make_tree(cube)
     >>> series, dist, idx = get_nearest_series(cube, tree,

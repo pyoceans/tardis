@@ -3,4 +3,6 @@ pytz
 numpy
 scipy
 oceans
+netcdf4
 pyugrid
+pysgrid

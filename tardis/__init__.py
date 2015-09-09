@@ -1,9 +1,15 @@
 from __future__ import absolute_import
 
 
-from .tardis import OceanModelCube
+from .tardis import OceanModelCube, load_phenomena
 from . import coords
 from . import slices
 from . import utils
 
-__version__ = '0.2.0'
+__all__ = ['OceanModelCube',
+           'load_phenomena',
+           'coords',
+           'slices',
+           'utils']
+
+__version__ = '0.3.0'

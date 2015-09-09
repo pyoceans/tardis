@@ -3,7 +3,7 @@ Changelog
 
 Version 0.2.0
 
-* First first with the new API.
+* First release with the new API.
 * Added an Ocean Model Enhanced Cube Class `ecube`.
 
 Version 0.1.1

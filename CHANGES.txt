@@ -1,6 +1,10 @@
 Changelog
 ---------
 
+Version 0.3.0
+
+* Removed `is_model` and `_source_of_data`.
+
 Version 0.2.0
 
 * First release with the new API.

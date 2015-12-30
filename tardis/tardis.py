@@ -2,40 +2,14 @@ import numpy as np
 
 
 import iris
+from iris.cube import CubeList
 
 import pyugrid
 import pysgrid  # NOTE: Really?! How many custom exceptions to say ValueError?
 from pysgrid.custom_exceptions import SGridNonCompliantError
 
 from .coords import x_coord, y_coord
-from .utils import wrap_lon180
-
-
-"""
-TODO:
-- pyresample for 2D Coords re-gridding.
-  http://pyresample.readthedocs.org/en/latest/installation.html
-- pykdtree as alternative to SciPy's KDTree.
-  https://github.com/storpipfugl/pykdtree
-- pysgrid
-  - From cube (and drop filename/URL).
-  - Expose some methods.
-    http://nbviewer.ipython.org/github/sgrid/pysgrid/blob/master/pysgrid/notebook_examples/hudson_shelf_valley.ipynb
-- pyugrid
-  - from cube (and drop filename/URL).
-  - expose some methods.
-  - https://ocefpaf.github.io/python4oceanographers/blog/2015/07/20/pyugrid
-- matplotlib.tri interpolation.
-  - http://matplotlib.org/examples/pylab_examples/triinterp_demo.html
-- Cartesian KDTree.
-  https://github.com/SciTools/iris/blob/00a168f5260c7ac765e0e307655d88cc218b2799/lib/iris/analysis/interpolate.py
-- z_slices
-  - How would cube.slices(['latitude', 'longitude']).next() work here?
-- Use sos_names and look for all standard_names.  This is dangerous, but very
-  convenient.
-- trajectory
-
-"""
+from .utils import wrap_lon180, cf_name_list
 
 
 def _get_grid(self):
@@ -67,6 +41,55 @@ def _get_grid_type(self):
     else:
         grid_type = 'unknown'
     return grid_type
+
+
+def _filter_none(lista):
+    return [x for x in lista if x is not None]
+
+
+def _in_list(cube, name_list):
+    return cube.standard_name in name_list
+
+
+def load_phenomena(url, name_list, callback=None, strict=False):
+    """
+    Return cube(s) for a certain phenomena in `name_list`.
+    The `name_list` must be a collection of CF-1.6 `standard_name`s.
+
+    If `strict` is set to True the function will return **only** one cube,
+    if only one is expected to exist, otherwise an exception will be raise.
+    (Similar to iris `extract_strict` method.)
+
+    The user may also pass a `callback` function to coerce the metadata
+    to CF-conventions.
+
+    Examples
+    --------
+    >>> import iris
+    >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/sabgom/"
+    ...        "SABGOM_Forecast_Model_Run_Collection_best.ncd")
+    >>> name_list = cf_name_list['sea_water_temperature']
+    >>> cubes = load_phenomena(url, name_list)
+    >>> cube = load_phenomena(url, name_list, strict=True)
+    >>> isinstance(cubes, CubeList)
+    True
+    >>> isinstance(cube, iris.cube.Cube)
+    True
+    """
+
+    cubes = iris.load_raw(url, callback=callback)
+    cubes = [cube for cube in cubes if _in_list(cube, name_list)]
+    cubes = _filter_none(cubes)
+    cubes = CubeList(cubes)
+    if not cubes:
+        raise ValueError('Cannot find {!r} in {}.'.format(name_list, url))
+    if strict:
+        if len(cubes) == 1:
+            return cubes[0]
+        else:
+            msg = "> 1 cube found!  Expected just one.\n {!r}".format
+        raise ValueError(msg(cubes))
+    return cubes
 
 
 class OceanModelCube(object):
@@ -124,57 +147,5 @@ class OceanModelCube(object):
         self._kdtree = KDTree(list(zip(lon.ravel(), lat.ravel())))
 
 if __name__ == '__main__':
-    import warnings
-
-    def load_ecube(url, standard_name='sea_water_potential_temperature'):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            cube = iris.load_cube(url, standard_name)
-        return OceanModelCube(cube, filename=url)
-
-    def verbose(ecube):
-        print("{!r}".format(ecube))
-        print("Grid object: {}".format(ecube.grid))
-
-    bbox = (272.6, 24.25, 285.3, 36.70)
-
-    print("\nRGRID and Z-coords\n")
-    url = "http://oos.soest.hawaii.edu/thredds/dodsC/pacioos/hycom/global"
-    rgrid = load_ecube(url)
-
-    verbose(rgrid)
-
-    if False:
-        subset = rgrid.subset(bbox)
-        print("Sub-setting with bbox {}.\n"
-              "Original: {}\nnew: {}".format(bbox, rgrid.cube.shape,
-                                             subset.shape))
-
-    print("\nNon-compliant SGRID and Non-dimension Z-coords.\n")
-    url = ("http://tds.marine.rutgers.edu/"
-           "thredds/dodsC/roms/espresso/2013_da/his_Best/"
-           "ESPRESSO_Real-Time_v2_History_Best_Available_best.ncd")
-
-    curv = load_ecube(url)
-    verbose(curv)
-
-    print("\nSGRID compliant and Non-dimension Z-coords.\n")
-    url = ("http://geoport.whoi.edu/thredds/dodsC/clay/usgs/users/"
-           "jcwarner/Projects/Sandy/triple_nest/00_dir_NYB05.ncml")
-
-    sgrid = load_ecube(url)
-    verbose(sgrid)
-
-    print("\nUGRID compliant and Non-dimension Z-coords.\n")
-    url = ("http://crow.marine.usf.edu:8080/thredds/dodsC/"
-           "FVCOM-Nowcast-Agg.nc")
-
-    ugrid = load_ecube(url)
-    verbose(ugrid)
-
-    print("\nObservation.\n")
-    url = "http://129.252.139.124/thredds/dodsC/fit.sispnj.met.nc"
-    try:
-        obs = load_ecube(url, standard_name="sea_water_temperature")
-    except ValueError as e:
-        print(e)
+    import doctest
+    doctest.testmod()

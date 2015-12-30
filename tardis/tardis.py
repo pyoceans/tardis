@@ -8,7 +8,7 @@ import pysgrid  # NOTE: Really?! How many custom exceptions to say ValueError?
 from pysgrid.custom_exceptions import SGridNonCompliantError
 
 from .coords import x_coord, y_coord
-from .utils import wrap_lon180, is_model
+from .utils import wrap_lon180
 
 
 """
@@ -81,11 +81,6 @@ class OceanModelCube(object):
         else:
             msg = "Expected an iris cube.  Got {!r}.".format
             raise ValueError(msg(cube))
-
-        if not is_model(cube):
-            msg = "Expect an Ocean Model cube got {}".format
-            data_type = cube.attributes.get('cdm_data_type', 'unknown').lower()
-            raise ValueError(msg(data_type))
 
         self._kdtree = None
         self.filename = filename

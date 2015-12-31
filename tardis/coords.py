@@ -8,66 +8,8 @@ iris.FUTURE.netcdf_promote = True
 iris.FUTURE.cell_datetime_objects = True
 
 
-__all__ = ['x_coord',
-           'y_coord',
-           't_coord',
+__all__ = ['t_coord',
            'z_coord']
-
-
-def x_coord(cube):
-    """
-    Return the canonical x-coordinate and rename it to `longitude`.
-    If more than one x-coordinate is present it will try to return only
-    the one names `longitude`.
-
-    Examples
-    --------
-    >>> import iris
-    >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/"
-    ...        "sabgom/SABGOM_Forecast_Model_Run_Collection_best.ncd")
-    >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
-    >>> x_coord(cube).name()
-    'longitude'
-
-    """
-    try:
-        # FIXME: This might wrongly rename some grids.
-        cube.coord(axis='X').rename('longitude')
-    except CoordinateNotFoundError:
-        # This will fail if there more than 1 x-coordinate
-        # and none are named `longitude`.
-        coord = cube.coord('longitude')
-    else:
-        coord = cube.coord('longitude')
-    return coord
-
-
-def y_coord(cube):
-    """
-    Return the canonical y-coordinate and rename it to `latitude`.
-    If more than one y-coordinate is present it will try to return only
-    the one names `latitude`.
-
-    Examples
-    --------
-    >>> import iris
-    >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/"
-    ...        "sabgom/SABGOM_Forecast_Model_Run_Collection_best.ncd")
-    >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
-    >>> y_coord(cube).name()
-    'latitude'
-
-    """
-    try:
-        # FIXME: This might wrongly rename some grids.
-        cube.coord(axis='Y').rename('latitude')
-    except CoordinateNotFoundError:
-        # This will fail if there more than 1 y-coordinate
-        # and none are named `latitude`.
-        coord = cube.coord('latitude')
-    else:
-        coord = cube.coord('latitude')
-    return coord
 
 
 def t_coord(cube):

@@ -8,8 +8,11 @@ import pyugrid
 import pysgrid  # NOTE: Really?! How many custom exceptions to say ValueError?
 from pysgrid.custom_exceptions import SGridNonCompliantError
 
-from .coords import x_coord, y_coord
 from .utils import wrap_lon180, cf_name_list
+
+__all__ = ['load_phenomena',
+           'OceanModelCube',
+           'cf_name_list']
 
 
 def _get_grid(self):
@@ -110,8 +113,8 @@ class OceanModelCube(object):
         self.grid = _get_grid(self)
         self.grid_type = _get_grid_type(self)
         # NOTE: I always wrap longitude between -180, 180.
-        self.lon = wrap_lon180(x_coord(cube).points)
-        self.lat = y_coord(cube).points
+        self.lon = wrap_lon180(cube.coords(axis='X')[0].points)
+        self.lat = cube.coords(axis='Y')[0].points
 
     def __repr__(self):
         msg = "<OceanModelCube of {}. Grid type: {}>".format

@@ -5,7 +5,7 @@ import numpy as np
 import iris
 from iris import Constraint
 
-from .coords import x_coord, y_coord, z_coord, t_coord
+from .coords import z_coord, t_coord
 
 iris.FUTURE.netcdf_promote = True
 iris.FUTURE.cell_datetime_objects = True
@@ -91,8 +91,8 @@ def find_bbox(cube, bbox):
 
     """
     from oceans import wrap_lon180
-    lons = x_coord(cube).points
-    lats = y_coord(cube).points
+    lons = cube.coords(axis='X')[0].points
+    lats = cube.coords(axis='Y')[0].points
     lons = wrap_lon180(lons)
 
     inregion = np.logical_and(np.logical_and(lons > bbox[0],

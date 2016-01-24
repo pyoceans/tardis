@@ -24,8 +24,8 @@ def t_coord(cube):
     >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/"
     ...        "sabgom/SABGOM_Forecast_Model_Run_Collection_best.ncd")
     >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
-    >>> t_coord(cube).name()
-    u'time'
+    >>> str(t_coord(cube).name())
+    'time'
 
     """
     try:
@@ -50,8 +50,8 @@ def z_coord(cube):
     >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/"
     ...        "sabgom/SABGOM_Forecast_Model_Run_Collection_best.ncd")
     >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
-    >>> z_coord(cube).name()
-    u'ocean_s_coordinate_g1'
+    >>> str(z_coord(cube).name())
+    'ocean_s_coordinate_g1'
 
     """
     non_dimensional = ['atmosphere_hybrid_height_coordinate',

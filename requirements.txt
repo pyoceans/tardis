@@ -6,3 +6,4 @@ oceans
 netcdf4
 pyugrid
 pysgrid
+gridgeo

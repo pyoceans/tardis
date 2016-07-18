@@ -53,11 +53,12 @@ def find_time(cube, datetime):
     Examples
     --------
     >>> import iris
+    >>> import numpy as np
     >>> from datetime import datetime
     >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/sabgom/"
     ...        "SABGOM_Forecast_Model_Run_Collection_best.ncd")
     >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
-    >>> isinstance(find_time(cube, datetime.utcnow()), int)
+    >>> isinstance(find_time(cube, datetime.utcnow()), np.integer)
     True
 
     """
@@ -81,12 +82,13 @@ def find_bbox(cube, bbox):
     Examples
     --------
     >>> import iris
+    >>> import numpy as np
     >>> url = ("http://omgsrv1.meas.ncsu.edu:8080/thredds/dodsC/fmrc/sabgom/"
     ...        "SABGOM_Forecast_Model_Run_Collection_best.ncd")
     >>> cube = iris.load_cube(url, 'sea_water_potential_temperature')
-    >>> bbox = [-87.40, 24.25, -74.70, 36.70]
+    >>> bbox = [-87.40, -74.70, 24.25, 36.70]
     >>> idxs = find_bbox(cube, bbox)
-    >>> [isinstance(idx, int) for idx in idxs]
+    >>> [isinstance(idx, np.integer) for idx in idxs]
     [True, True, True, True]
 
     """
@@ -96,8 +98,8 @@ def find_bbox(cube, bbox):
     lons = wrap_lon180(lons)
 
     inregion = np.logical_and(np.logical_and(lons > bbox[0],
-                                             lons < bbox[2]),
-                              np.logical_and(lats > bbox[1],
+                                             lons < bbox[1]),
+                              np.logical_and(lats > bbox[2],
                                              lats < bbox[3]))
     region_inds = np.where(inregion)
     imin, imax = _minmax(region_inds[0])
@@ -189,7 +191,14 @@ def extract_bbox(cube, bbox, grid_type):
         cube = cube.extract(lon & lat)
     elif grid_type == 'sgrid' or grid_type == '2D_curvilinear':
         imin, imax, jmin, jmax = find_bbox(cube, bbox)
-        cube = cube[..., imin:imax, jmin:jmax]
+        if cube.ndim > 2:
+            cube = cube[..., imin:imax, jmin:jmax]
+        elif cube.ndim == 2:
+            cube = cube[imin:imax, jmin:jmax]
+        else:
+            msg = 'Cannot subset {!r} with bbox {}'.format
+            raise ValueError(msg(cube, bbox))
+
     # NOTE: `rgrid` and `unknown` are passed to iris`.intersection()`
     # intersection should deal 0-360 properly.
     else:

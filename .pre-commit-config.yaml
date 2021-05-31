@@ -1,0 +1,47 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v3.4.0
+  hooks:
+    - id: check-ast
+    - id: end-of-file-fixer
+      exclude: github_deploy_key.enc
+    - id: check-docstring-first
+    - id: check-added-large-files
+    - id: requirements-txt-fixer
+    - id: file-contents-sorter
+      files: requirements-dev.txt
+    - id: trailing-whitespace
+    - id: debug-statements
+
+- repo: https://gitlab.com/pycqa/flake8
+  rev: 3.9.0
+  hooks:
+    - id: flake8
+      exclude: docs/source/conf.py
+      args: [--max-line-length=105, "--ignore=E203,W503"]
+
+- repo: https://github.com/pycqa/isort
+  rev: 5.7.0
+  hooks:
+    - id: isort
+      additional_dependencies: [toml]
+      args: ["--profile", "black", "--filter-files"]
+
+- repo: https://github.com/psf/black
+  rev: 20.8b1
+  hooks:
+  - id: black
+    language_version: python3
+
+- repo: https://github.com/asottile/pyupgrade
+  rev: v2.10.0
+  hooks:
+    - id: pyupgrade
+      args:
+        - --py36-plus
+
+- repo: https://github.com/asottile/add-trailing-comma
+  rev: v2.1.0
+  hooks:
+    - id: add-trailing-comma
+© 2021 GitHub, Inc.

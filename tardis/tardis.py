@@ -1,22 +1,17 @@
-import numpy as np
-
-
 import iris
-from iris.cube import CubeList
-
-import pyugrid
+import numpy as np
 import pysgrid  # NOTE: Really?! How many custom exceptions to say ValueError?
+import pyugrid
+from iris.cube import CubeList
 from pysgrid.custom_exceptions import SGridNonCompliantError
 
-from .utils import wrap_lon180, cf_name_list
+from .utils import cf_name_list, wrap_lon180
 
-__all__ = ['load_phenomena',
-           'OceanModelCube',
-           'cf_name_list']
+__all__ = ["load_phenomena", "OceanModelCube", "cf_name_list"]
 
 
 def _get_grid(self):
-    grid = 'unknown'
+    grid = "unknown"
     # SGRID.
     try:
         return pysgrid.from_ncfile(self.filename)
@@ -31,18 +26,18 @@ def _get_grid(self):
 
 
 def _get_grid_type(self):
-    xdim = self.cube.coord(axis='X').ndim
-    ydim = self.cube.coord(axis='Y').ndim
+    xdim = self.cube.coord(axis="X").ndim
+    ydim = self.cube.coord(axis="Y").ndim
     if isinstance(self.grid, pysgrid.SGrid2D):
-        grid_type = 'sgrid'
+        grid_type = "sgrid"
     elif isinstance(self.grid, pyugrid.UGrid):
-        grid_type = 'ugrid'
+        grid_type = "ugrid"
     elif xdim == 1 and ydim == 1:
-        grid_type = 'rgrid'
+        grid_type = "rgrid"
     elif xdim == 2 and ydim == 2:
-        grid_type = '2D_curvilinear'
+        grid_type = "2D_curvilinear"
     else:
-        grid_type = 'unknown'
+        grid_type = "unknown"
     return grid_type
 
 
@@ -85,7 +80,7 @@ def load_phenomena(url, name_list, callback=None, strict=False):
     cubes = _filter_none(cubes)
     cubes = CubeList(cubes)
     if not cubes:
-        raise ValueError('Cannot find {!r} in {}.'.format(name_list, url))
+        raise ValueError(f"Cannot find {name_list!r} in {url}.")
     if strict:
         if len(cubes) == 1:
             return cubes[0]
@@ -95,7 +90,7 @@ def load_phenomena(url, name_list, callback=None, strict=False):
     return cubes
 
 
-class OceanModelCube(object):
+class OceanModelCube:
     """
     Simple class that contains the cube and some extra goodies.
 
@@ -113,13 +108,12 @@ class OceanModelCube(object):
         self.grid = _get_grid(self)
         self.grid_type = _get_grid_type(self)
         # NOTE: I always wrap longitude between -180, 180.
-        self.lon = wrap_lon180(cube.coords(axis='X')[0].points)
-        self.lat = cube.coords(axis='Y')[0].points
+        self.lon = wrap_lon180(cube.coords(axis="X")[0].points)
+        self.lat = cube.coords(axis="Y")[0].points
 
     def __repr__(self):
         msg = "<OceanModelCube of {}. Grid type: {}>".format
-        return msg(self.cube.summary(shorten=True, name_padding=1),
-                   self.grid_type)
+        return msg(self.cube.summary(shorten=True, name_padding=1), self.grid_type)
 
     def get_nearest_grid_points(self, xi, yi, k=1):
         """
@@ -133,22 +127,25 @@ class OceanModelCube(object):
 
         distances, indices = self._kdtree.query(np.array([xi, yi]).T, k=k)
 
-        if self.grid_type == 'rgrid':
+        if self.grid_type == "rgrid":
             shape = (self.lat.shape[0], self.lon.shape[0])
         else:
-            assert (self.lon.shape == self.lat.shape)
+            assert self.lon.shape == self.lat.shape
             shape = self.lon.shape
         idx = np.unravel_index(indices, shape)
         return distances, idx
 
     def _make_tree(self):
         from scipy.spatial import cKDTree as KDTree
+
         lon, lat = self.lon, self.lat
-        if self.grid_type == 'rgrid':
+        if self.grid_type == "rgrid":
             lon, lat = np.meshgrid(lon, lat)
         # 2D_curvilinear, sgrid and ugrid are already paired.
         self._kdtree = KDTree(list(zip(lon.ravel(), lat.ravel())))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod()

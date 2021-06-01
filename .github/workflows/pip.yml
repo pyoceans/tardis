@@ -27,3 +27,4 @@ jobs:
     - name: pip-tests
       run: |
         pytest -rxs tests
+        

@@ -1,15 +1,11 @@
-from __future__ import division, absolute_import
-
 import iris
 from iris.exceptions import CoordinateNotFoundError
-
 
 iris.FUTURE.netcdf_promote = True
 iris.FUTURE.cell_datetime_objects = True
 
 
-__all__ = ['t_coord',
-           'z_coord']
+__all__ = ["t_coord", "z_coord"]
 
 
 def t_coord(cube):
@@ -29,13 +25,13 @@ def t_coord(cube):
 
     """
     try:
-        cube.coord(axis='T').rename('time')
+        cube.coord(axis="T").rename("time")
     except CoordinateNotFoundError:
         # This will fail if there more than 1 time coordinate
         # and none are named time.
-        coord = cube.coord('time')
+        coord = cube.coord("time")
     else:
-        coord = cube.coord('time')
+        coord = cube.coord("time")
     return coord
 
 
@@ -54,33 +50,36 @@ def z_coord(cube):
     'ocean_s_coordinate_g1'
 
     """
-    non_dimensional = ['atmosphere_hybrid_height_coordinate',
-                       'atmosphere_hybrid_sigma_pressure_coordinate',
-                       'atmosphere_sigma_coordinate',
-                       'atmosphere_sleve_coordinate',
-                       'ocean_s_coordinate',
-                       'ocean_s_coordinate_g1',
-                       'ocean_s_coordinate_g2',
-                       'ocean_sigma_coordinate',
-                       'ocean_sigma_z_coordinate']
+    non_dimensional = [
+        "atmosphere_hybrid_height_coordinate",
+        "atmosphere_hybrid_sigma_pressure_coordinate",
+        "atmosphere_sigma_coordinate",
+        "atmosphere_sleve_coordinate",
+        "ocean_s_coordinate",
+        "ocean_s_coordinate_g1",
+        "ocean_s_coordinate_g2",
+        "ocean_sigma_coordinate",
+        "ocean_sigma_z_coordinate",
+    ]
     coord = None
     # If only one exists get that.
     try:
-        coord = cube.coord(axis='Z')
+        coord = cube.coord(axis="Z")
     except CoordinateNotFoundError:
         # If a named `z_coord` exist.
         try:
-            coord = cube.coord(axis='altitude')
+            coord = cube.coord(axis="altitude")
         except CoordinateNotFoundError:
             # OK, let's use the non-dimensional names
             # until http://cf-trac.llnl.gov/trac/ticket/143 is in.
-            for coord in cube.coords(axis='Z'):
+            for coord in cube.coords(axis="Z"):
                 if coord.name() in non_dimensional:
                     coord = coord
                     break
     return coord
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod()

@@ -1,22 +1,21 @@
-from __future__ import division, absolute_import
-
-import numpy as np
-
 import iris
+import numpy as np
 from iris import Constraint
 
-from .coords import z_coord, t_coord
+from .coords import t_coord, z_coord
 
 iris.FUTURE.netcdf_promote = True
 iris.FUTURE.cell_datetime_objects = True
 
 
-__all__ = ['find_surface',
-           'find_time',
-           'find_bbox',
-           'extract_surface',
-           'extract_time',
-           'extract_bbox']
+__all__ = [
+    "find_surface",
+    "find_time",
+    "find_bbox",
+    "extract_surface",
+    "extract_time",
+    "extract_bbox",
+]
 
 
 def find_surface(cube):
@@ -38,8 +37,8 @@ def find_surface(cube):
             points = z[0, :].points
         else:
             points = z.points
-        positive = z.attributes.get('positive', None)
-        if positive == 'up':
+        positive = z.attributes.get("positive", None)
+        if positive == "up":
             idx = np.unique(points.argmax(axis=0))[0]
         else:
             idx = np.unique(points.argmin(axis=0))[0]
@@ -93,18 +92,19 @@ def find_bbox(cube, bbox):
 
     """
     from oceans import wrap_lon180
-    lons = cube.coords(axis='X')[0].points
-    lats = cube.coords(axis='Y')[0].points
+
+    lons = cube.coords(axis="X")[0].points
+    lats = cube.coords(axis="Y")[0].points
     lons = wrap_lon180(lons)
 
-    inregion = np.logical_and(np.logical_and(lons > bbox[0],
-                                             lons < bbox[1]),
-                              np.logical_and(lats > bbox[2],
-                                             lats < bbox[3]))
+    inregion = np.logical_and(
+        np.logical_and(lons > bbox[0], lons < bbox[1]),
+        np.logical_and(lats > bbox[2], lats < bbox[3]),
+    )
     region_inds = np.where(inregion)
     imin, imax = _minmax(region_inds[0])
     jmin, jmax = _minmax(region_inds[1])
-    return imin, imax+1, jmin, jmax+1
+    return imin, imax + 1, jmin, jmax + 1
 
 
 def extract_surface(cube):
@@ -157,9 +157,11 @@ def extract_time(cube, start, stop=None):
     if stop:
         istop = find_time(cube, stop)
         if istart == istop:
-            raise ValueError('istart must be different from istop! '
-                             'Got istart {!r} and '
-                             ' istop {!r}'.format(istart, istop))
+            raise ValueError(
+                "istart must be different from istop! "
+                "Got istart {!r} and "
+                " istop {!r}".format(istart, istop),
+            )
         return cube[istart:istop, ...]
     else:
         return cube[istart, ...]
@@ -185,28 +187,31 @@ def extract_bbox(cube, bbox, grid_type):
     True
 
     """
-    if grid_type == 'ugrid':
+    if grid_type == "ugrid":
         lat = Constraint(latitude=lambda cell: bbox[1] <= cell <= bbox[3])
         lon = Constraint(longitude=lambda cell: bbox[0] <= cell <= bbox[2])
         cube = cube.extract(lon & lat)
-    elif grid_type == 'sgrid' or grid_type == '2D_curvilinear':
+    elif grid_type == "sgrid" or grid_type == "2D_curvilinear":
         imin, imax, jmin, jmax = find_bbox(cube, bbox)
         if cube.ndim > 2:
             cube = cube[..., imin:imax, jmin:jmax]
         elif cube.ndim == 2:
             cube = cube[imin:imax, jmin:jmax]
         else:
-            msg = 'Cannot subset {!r} with bbox {}'.format
+            msg = "Cannot subset {!r} with bbox {}".format
             raise ValueError(msg(cube, bbox))
 
     # NOTE: `rgrid` and `unknown` are passed to iris`.intersection()`
     # intersection should deal 0-360 properly.
     else:
-        cube = cube.intersection(longitude=(bbox[0], bbox[2]),
-                                 latitude=(bbox[1], bbox[3]))
+        cube = cube.intersection(
+            longitude=(bbox[0], bbox[2]),
+            latitude=(bbox[1], bbox[3]),
+        )
     return cube
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod()
